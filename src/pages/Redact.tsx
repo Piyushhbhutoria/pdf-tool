@@ -31,6 +31,8 @@ const Redact = () => {
   const [canRedo, setCanRedo] = useState(false);
   const [redactionCount, setRedactionCount] = useState(0);
   const [pageRedactions, setPageRedactions] = useState<Map<number, RedactionBox[]>>(new Map());
+  const [history, setHistory] = useState<Map<number, RedactionBox[]>[]>([]);
+  const [historyStep, setHistoryStep] = useState(-1);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +40,17 @@ const Redact = () => {
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentRectRef = useRef<Rect | null>(null);
   const { toast } = useToast();
+
+  const saveToHistory = (redactions: Map<number, RedactionBox[]>) => {
+    const newHistory = history.slice(0, historyStep + 1);
+    // Deep clone the map
+    const clonedMap = new Map(Array.from(redactions.entries()).map(([k, v]) => [k, [...v]]));
+    newHistory.push(clonedMap);
+    setHistory(newHistory);
+    setHistoryStep(newHistory.length - 1);
+    setCanUndo(true);
+    setCanRedo(false);
+  };
 
   const handleFileAccepted = async (files: File[]) => {
     if (files.length > 0) {
@@ -47,7 +60,12 @@ const Redact = () => {
       setFile(files[0]);
       setTotalPages(pdf.getPageCount());
       setCurrentPage(0);
-      setPageRedactions(new Map());
+      const initialMap = new Map();
+      setPageRedactions(initialMap);
+      setHistory([initialMap]);
+      setHistoryStep(0);
+      setCanUndo(false);
+      setCanRedo(false);
     }
   };
 
@@ -189,14 +207,73 @@ const Redact = () => {
     newPageRedactions.set(currentPage, boxes);
     setPageRedactions(newPageRedactions);
     setRedactionCount(boxes.length);
+    saveToHistory(newPageRedactions);
   };
 
   const handleUndo = () => {
-    toast({ title: "Undo not yet implemented" });
+    if (historyStep <= 0) return;
+
+    const newStep = historyStep - 1;
+    const previousState = history[newStep];
+    
+    setPageRedactions(previousState);
+    setHistoryStep(newStep);
+    setCanUndo(newStep > 0);
+    setCanRedo(true);
+
+    // Update the canvas with the restored state
+    if (fabricCanvas) {
+      fabricCanvas.clear();
+      const redactions = previousState.get(currentPage) || [];
+      redactions.forEach(box => {
+        const rect = new Rect({
+          left: box.left,
+          top: box.top,
+          width: box.width,
+          height: box.height,
+          fill: "#000000",
+          selectable: activeTool === "select",
+          hasControls: true,
+          hasBorders: true,
+        });
+        fabricCanvas.add(rect);
+      });
+      setRedactionCount(redactions.length);
+      fabricCanvas.renderAll();
+    }
   };
 
   const handleRedo = () => {
-    toast({ title: "Redo not yet implemented" });
+    if (historyStep >= history.length - 1) return;
+
+    const newStep = historyStep + 1;
+    const nextState = history[newStep];
+    
+    setPageRedactions(nextState);
+    setHistoryStep(newStep);
+    setCanUndo(true);
+    setCanRedo(newStep < history.length - 1);
+
+    // Update the canvas with the restored state
+    if (fabricCanvas) {
+      fabricCanvas.clear();
+      const redactions = nextState.get(currentPage) || [];
+      redactions.forEach(box => {
+        const rect = new Rect({
+          left: box.left,
+          top: box.top,
+          width: box.width,
+          height: box.height,
+          fill: "#000000",
+          selectable: activeTool === "select",
+          hasControls: true,
+          hasBorders: true,
+        });
+        fabricCanvas.add(rect);
+      });
+      setRedactionCount(redactions.length);
+      fabricCanvas.renderAll();
+    }
   };
 
   const handleDelete = () => {
