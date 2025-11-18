@@ -8,11 +8,15 @@ import { ArrowLeft, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { PDFDocument } from "pdf-lib";
+import { PdfPageThumbnails } from "@/components/pdf/PdfPageThumbnails";
+import { Card } from "@/components/ui/card";
 
 const Split = () => {
   const [file, setFile] = useState<File | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [splitRanges, setSplitRanges] = useState("");
+  const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFileAccepted = async (files: File[]) => {
@@ -22,12 +26,50 @@ const Split = () => {
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
       const pdf = await PDFDocument.load(arrayBuffer);
+      setPdfDoc(pdf);
       setPageCount(pdf.getPageCount());
+      setSelectedPages([]);
       toast.success("PDF loaded successfully");
     } catch (error) {
       toast.error("Failed to load PDF");
       console.error(error);
     }
+  };
+
+  const handlePageSelect = (pageIndex: number) => {
+    setSelectedPages(prev => {
+      if (prev.includes(pageIndex)) {
+        return prev.filter(p => p !== pageIndex);
+      }
+      return [...prev, pageIndex].sort((a, b) => a - b);
+    });
+  };
+
+  const selectAllPages = () => {
+    setSelectedPages(Array.from({ length: pageCount }, (_, i) => i));
+  };
+
+  const clearSelection = () => {
+    setSelectedPages([]);
+  };
+
+  const generateRangesFromSelection = () => {
+    if (selectedPages.length === 0) return;
+    
+    const ranges: string[] = [];
+    let start = selectedPages[0];
+    let end = selectedPages[0];
+
+    for (let i = 1; i < selectedPages.length; i++) {
+      if (selectedPages[i] === end + 1) {
+        end = selectedPages[i];
+      } else {
+        ranges.push(start === end ? `${start + 1}` : `${start + 1}-${end + 1}`);
+        start = end = selectedPages[i];
+      }
+    }
+    ranges.push(start === end ? `${start + 1}` : `${start + 1}-${end + 1}`);
+    setSplitRanges(ranges.join(", "));
   };
 
   const splitPDF = async () => {
@@ -113,13 +155,42 @@ const Split = () => {
             multiple={false}
           />
 
-          {file && pageCount > 0 && (
+          {file && pageCount > 0 && pdfDoc && (
             <div className="space-y-4">
               <div className="p-4 bg-accent rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   <span className="font-semibold text-foreground">{file.name}</span> - {pageCount} pages
                 </p>
               </div>
+
+              <Card className="p-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Select Pages to Extract</h3>
+                    <div className="flex gap-2">
+                      <Button onClick={selectAllPages} variant="outline" size="sm">
+                        Select All
+                      </Button>
+                      <Button onClick={clearSelection} variant="outline" size="sm">
+                        Clear
+                      </Button>
+                      {selectedPages.length > 0 && (
+                        <Button onClick={generateRangesFromSelection} variant="secondary" size="sm">
+                          Use Selected ({selectedPages.length})
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <PdfPageThumbnails
+                    pdfDoc={pdfDoc}
+                    selectedPages={selectedPages}
+                    onPageSelect={handlePageSelect}
+                    multiSelect={true}
+                    className="max-h-[400px]"
+                  />
+                </div>
+              </Card>
 
               <div className="space-y-2">
                 <Label htmlFor="ranges">Page Ranges</Label>
@@ -130,7 +201,7 @@ const Split = () => {
                   onChange={(e) => setSplitRanges(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter page numbers or ranges separated by commas (e.g., 1-3, 5-7, 9)
+                  Enter page numbers or ranges separated by commas, or select pages above
                 </p>
               </div>
 

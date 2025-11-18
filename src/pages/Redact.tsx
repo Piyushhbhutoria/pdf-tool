@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RedactionToolbar } from "@/components/redaction/RedactionToolbar";
 import { Canvas as FabricCanvas, Rect } from "fabric";
 import { Card } from "@/components/ui/card";
+import { PdfPageThumbnails } from "@/components/pdf/PdfPageThumbnails";
 
 type Tool = "select" | "redact";
 
@@ -409,41 +410,60 @@ const Redact = () => {
                 redactionCount={redactionCount}
               />
 
-              <Card className="p-4">
-                <div className="flex justify-center items-center relative">
-                  <div className="relative">
-                    <canvas ref={pdfCanvasRef} className="absolute top-0 left-0" />
-                    <canvas 
-                      ref={canvasRef} 
-                      className="relative border border-border rounded cursor-crosshair" 
+              <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4">
+                {totalPages > 1 && pdfDoc && (
+                  <Card className="p-2">
+                    <h3 className="text-sm font-semibold mb-2 px-2">Pages</h3>
+                    <PdfPageThumbnails
+                      pdfDoc={pdfDoc}
+                      currentPage={currentPage}
+                      onPageClick={(pageIndex) => {
+                        saveCurrentPageRedactions();
+                        setCurrentPage(pageIndex);
+                      }}
+                      className="max-h-[600px]"
                     />
-                  </div>
-                </div>
-              </Card>
+                  </Card>
+                )}
 
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={goToPreviousPage}
-                    disabled={currentPage === 0}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {currentPage + 1} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages - 1}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-4">
+                  <Card className="p-4">
+                    <div className="flex justify-center items-center relative">
+                      <div className="relative">
+                        <canvas ref={pdfCanvasRef} className="absolute top-0 left-0" />
+                        <canvas 
+                          ref={canvasRef} 
+                          className="relative border border-border rounded cursor-crosshair" 
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-4">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={goToPreviousPage}
+                        disabled={currentPage === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage + 1} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={goToNextPage}
+                        disabled={currentPage === totalPages - 1}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div className="flex gap-4">
                 <Button onClick={handleSave} disabled={isSaving} size="lg" className="flex-1">
