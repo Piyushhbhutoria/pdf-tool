@@ -23,11 +23,23 @@ const Edit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyStep, setHistoryStep] = useState(-1);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const saveToHistory = (canvas: FabricCanvas) => {
+    const json = JSON.stringify(canvas.toJSON());
+    const newHistory = history.slice(0, historyStep + 1);
+    newHistory.push(json);
+    setHistory(newHistory);
+    setHistoryStep(newHistory.length - 1);
+    setCanUndo(true);
+    setCanRedo(false);
+  };
 
   const handleFileAccepted = async (files: File[]) => {
     if (files.length > 0) {
@@ -71,10 +83,29 @@ const Edit = () => {
       fabric.freeDrawingBrush.color = activeColor;
       fabric.freeDrawingBrush.width = 2;
 
+      // Save initial state to history
+      const initialState = JSON.stringify(fabric.toJSON());
+      setHistory([initialState]);
+      setHistoryStep(0);
+      setCanUndo(false);
+      setCanRedo(false);
+
+      // Track canvas modifications
+      fabric.on("object:added", () => saveToHistory(fabric));
+      fabric.on("object:modified", () => saveToHistory(fabric));
+      fabric.on("object:removed", () => saveToHistory(fabric));
+
       setFabricCanvas(fabric);
     } else if (fabricCanvas) {
       fabricCanvas.setDimensions({ width: canvas.width, height: canvas.height });
       fabricCanvas.clear();
+      
+      // Reset history when changing pages
+      const initialState = JSON.stringify(fabricCanvas.toJSON());
+      setHistory([initialState]);
+      setHistoryStep(0);
+      setCanUndo(false);
+      setCanRedo(false);
     }
   };
 
@@ -183,13 +214,53 @@ const Edit = () => {
   };
 
   const handleUndo = () => {
-    // Implement undo functionality
-    toast({ title: "Undo not yet implemented" });
+    if (!fabricCanvas || historyStep <= 0) return;
+
+    const newStep = historyStep - 1;
+    const state = history[newStep];
+
+    // Temporarily remove event listeners to prevent saving during undo
+    fabricCanvas.off("object:added");
+    fabricCanvas.off("object:modified");
+    fabricCanvas.off("object:removed");
+
+    fabricCanvas.loadFromJSON(state, () => {
+      fabricCanvas.renderAll();
+      
+      // Re-attach event listeners
+      fabricCanvas.on("object:added", () => saveToHistory(fabricCanvas));
+      fabricCanvas.on("object:modified", () => saveToHistory(fabricCanvas));
+      fabricCanvas.on("object:removed", () => saveToHistory(fabricCanvas));
+    });
+
+    setHistoryStep(newStep);
+    setCanUndo(newStep > 0);
+    setCanRedo(true);
   };
 
   const handleRedo = () => {
-    // Implement redo functionality
-    toast({ title: "Redo not yet implemented" });
+    if (!fabricCanvas || historyStep >= history.length - 1) return;
+
+    const newStep = historyStep + 1;
+    const state = history[newStep];
+
+    // Temporarily remove event listeners to prevent saving during redo
+    fabricCanvas.off("object:added");
+    fabricCanvas.off("object:modified");
+    fabricCanvas.off("object:removed");
+
+    fabricCanvas.loadFromJSON(state, () => {
+      fabricCanvas.renderAll();
+      
+      // Re-attach event listeners
+      fabricCanvas.on("object:added", () => saveToHistory(fabricCanvas));
+      fabricCanvas.on("object:modified", () => saveToHistory(fabricCanvas));
+      fabricCanvas.on("object:removed", () => saveToHistory(fabricCanvas));
+    });
+
+    setHistoryStep(newStep);
+    setCanUndo(true);
+    setCanRedo(newStep < history.length - 1);
   };
 
   const handleDelete = () => {
