@@ -18,7 +18,7 @@ interface MergeFileItemProps {
 }
 
 export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pageCount, setPageCount] = useState<number>(0);
