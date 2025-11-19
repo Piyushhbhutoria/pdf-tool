@@ -7,10 +7,80 @@ import { ArrowLeft, Download, Trash2, GripVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { PDFDocument } from "pdf-lib";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+interface SortableFileItemProps {
+  file: File;
+  index: number;
+  onRemove: () => void;
+}
+
+const SortableFileItem = ({ file, index, onRemove }: SortableFileItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `file-${index}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card ref={setNodeRef} style={style} className="p-4">
+      <div className="flex items-center gap-3">
+        <div {...attributes} {...listeners} className="cursor-move">
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate">{file.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {(file.size / 1024 / 1024).toFixed(2)} MB
+          </p>
+        </div>
+        <Button
+          onClick={onRemove}
+          variant="ghost"
+          size="sm"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </Card>
+  );
+};
 
 const Merge = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleFilesAccepted = (newFiles: File[]) => {
     setFiles(prev => [...prev, ...newFiles]);
@@ -19,6 +89,19 @@ const Merge = () => {
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setFiles((items) => {
+        const oldIndex = items.findIndex((_, i) => `file-${i}` === active.id);
+        const newIndex = items.findIndex((_, i) => `file-${i}` === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+      toast.success("File order updated");
+    }
   };
 
   const mergePDFs = async () => {
@@ -91,28 +174,27 @@ const Merge = () => {
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                {files.map((file, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{file.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => removeFile(index)}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={files.map((_, index) => `file-${index}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <SortableFileItem
+                        key={`file-${index}`}
+                        file={file}
+                        index={index}
+                        onRemove={() => removeFile(index)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
               <Button
                 onClick={mergePDFs}
