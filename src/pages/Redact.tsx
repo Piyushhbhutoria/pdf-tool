@@ -422,6 +422,7 @@ const Redact = () => {
                         setCurrentPage(pageIndex);
                       }}
                       className="max-h-[600px]"
+                      file={file}
                     />
                   </Card>
                 )}

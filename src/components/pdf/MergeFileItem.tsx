@@ -6,6 +6,10 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
 import { Skeleton } from "@/components/ui/skeleton";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Set worker path
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface MergeFileItemProps {
   file: File;
@@ -55,29 +59,27 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
       setIsLoading(true);
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(arrayBuffer);
-        const pageCount = pdfDoc.getPageCount();
-        const maxPages = Math.min(pageCount, 10); // Limit to first 10 pages for performance
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const maxPages = Math.min(pdf.numPages, 10); // Limit to first 10 pages
         
         const thumbs: string[] = [];
         
-        for (let i = 0; i < maxPages; i++) {
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 0.5 });
+          
           const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          if (!ctx) continue;
+          const context = canvas.getContext("2d");
+          if (!context) continue;
 
-          canvas.width = 150;
-          canvas.height = 200;
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
 
-          // Simple placeholder - draw page number
-          ctx.fillStyle = "#f3f4f6";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.strokeStyle = "#e5e7eb";
-          ctx.strokeRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#6b7280";
-          ctx.font = "16px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(`Page ${i + 1}`, canvas.width / 2, canvas.height / 2);
+          await page.render({
+            canvasContext: context,
+            viewport: viewport,
+            canvas: canvas,
+          }).promise;
 
           thumbs.push(canvas.toDataURL());
         }

@@ -188,6 +188,7 @@ const Split = () => {
                     onPageSelect={handlePageSelect}
                     multiSelect={true}
                     className="max-h-[400px]"
+                    file={file}
                   />
                 </div>
               </Card>
