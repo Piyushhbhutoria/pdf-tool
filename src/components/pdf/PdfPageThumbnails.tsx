@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Maximize2 } from "lucide-react";
 import { PdfPagePreviewModal } from "./PdfPagePreviewModal";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Set worker path
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set worker path for Vite
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PdfPageThumbnailsProps {
   pdfDoc: PDFDocument;

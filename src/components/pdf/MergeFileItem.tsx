@@ -7,9 +7,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
 import { Skeleton } from "@/components/ui/skeleton";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Set worker path
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set worker path for Vite
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface MergeFileItemProps {
   file: File;
