@@ -490,6 +490,7 @@ const Edit = () => {
                       currentPage={currentPage}
                       onPageClick={setCurrentPage}
                       className="max-h-[600px]"
+                      file={file}
                     />
                   </Card>
                 )}

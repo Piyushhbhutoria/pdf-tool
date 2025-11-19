@@ -4,6 +4,10 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Set worker path
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface PdfPageThumbnailsProps {
   pdfDoc: PDFDocument;
@@ -13,6 +17,7 @@ interface PdfPageThumbnailsProps {
   onPageSelect?: (pageIndex: number) => void;
   multiSelect?: boolean;
   className?: string;
+  file?: File;
 }
 
 export const PdfPageThumbnails = ({
@@ -23,48 +28,52 @@ export const PdfPageThumbnails = ({
   onPageSelect,
   multiSelect = false,
   className,
+  file,
 }: PdfPageThumbnailsProps) => {
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const generateThumbnails = async () => {
+      if (!file) return;
+      
       setIsLoading(true);
-      const pageCount = pdfDoc.getPageCount();
-      const thumbs: string[] = [];
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pageCount = pdf.numPages;
+        const thumbs: string[] = [];
 
-      for (let i = 0; i < pageCount; i++) {
-        const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
+        for (let i = 1; i <= pageCount; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 0.3 });
+          
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          if (!context) continue;
 
-        const scale = 150 / width;
-        const canvas = document.createElement("canvas");
-        canvas.width = width * scale;
-        canvas.height = height * scale;
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
 
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "white";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#9ca3af";
-          ctx.font = "14px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(
-            `Page ${i + 1}`,
-            canvas.width / 2,
-            canvas.height / 2
-          );
+          await page.render({
+            canvasContext: context,
+            viewport: viewport,
+            canvas: canvas,
+          }).promise;
+
+          thumbs.push(canvas.toDataURL());
         }
 
-        thumbs.push(canvas.toDataURL());
+        setThumbnails(thumbs);
+      } catch (error) {
+        console.error("Error generating thumbnails:", error);
+      } finally {
+        setIsLoading(false);
       }
-
-      setThumbnails(thumbs);
-      setIsLoading(false);
     };
 
     generateThumbnails();
-  }, [pdfDoc]);
+  }, [pdfDoc, file]);
 
   const handlePageInteraction = (pageIndex: number) => {
     if (multiSelect && onPageSelect) {
