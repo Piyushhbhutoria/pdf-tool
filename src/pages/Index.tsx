@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
-import { FileText, Merge, Scissors, ArrowUpDown, Minimize2, Edit3, EyeOff } from "lucide-react";
+import { FileText, Merge, Scissors, ArrowUpDown, Minimize2 } from "lucide-react";
 
 const Index = () => {
   const tools = [
@@ -31,20 +31,6 @@ const Index = () => {
       description: "Reduce file size while maintaining quality for easy sharing",
       href: "/compress",
       gradient: "from-purple-500 to-purple-600"
-    },
-    {
-      icon: Edit3,
-      title: "Edit PDF",
-      description: "Add text, images, and annotations to your PDF documents",
-      href: "/edit",
-      gradient: "from-fuchsia-500 to-fuchsia-600"
-    },
-    {
-      icon: EyeOff,
-      title: "Redact PDF",
-      description: "Remove sensitive information securely from your documents",
-      href: "/redact",
-      gradient: "from-pink-500 to-pink-600"
     }
   ];
 
