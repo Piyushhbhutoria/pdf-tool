@@ -25,6 +25,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+// Set worker path for Vite
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PageThumbnail {
   id: string;
@@ -92,30 +97,26 @@ const Rearrange = () => {
   );
 
   const renderPDFPage = async (
-    pdfDoc: PDFDocument,
+    file: File,
     pageIndex: number
   ): Promise<string> => {
-    const page = pdfDoc.getPage(pageIndex);
-    const { width, height } = page.getSize();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(pageIndex + 1);
+    const viewport = page.getViewport({ scale: 0.5 });
 
-    const scale = 200 / width;
     const canvas = document.createElement("canvas");
-    canvas.width = width * scale;
-    canvas.height = height * scale;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not get canvas context");
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Could not get canvas context");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
 
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#e5e7eb";
-    ctx.font = "16px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(
-      `Page ${pageIndex + 1}`,
-      canvas.width / 2,
-      canvas.height / 2
-    );
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+      canvas: canvas,
+    }).promise;
 
     return canvas.toDataURL();
   };
@@ -139,7 +140,7 @@ const Rearrange = () => {
 
       const thumbnails: PageThumbnail[] = [];
       for (let i = 0; i < pageCount; i++) {
-        const dataUrl = await renderPDFPage(pdfDoc, i);
+        const dataUrl = await renderPDFPage(file, i);
         thumbnails.push({
           id: `page-${i}`,
           pageNumber: i + 1,
