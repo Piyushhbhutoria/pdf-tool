@@ -10,6 +10,11 @@ import { RedactionToolbar } from "@/components/redaction/RedactionToolbar";
 import { Canvas as FabricCanvas, Rect } from "fabric";
 import { Card } from "@/components/ui/card";
 import { PdfPageThumbnails } from "@/components/pdf/PdfPageThumbnails";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+// Set worker path for Vite
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type Tool = "select" | "redact";
 
@@ -71,54 +76,74 @@ const Redact = () => {
   };
 
   const renderPdfPage = async (pageIndex: number) => {
-    if (!pdfDoc || !pdfCanvasRef.current) return;
-
-    const page = pdfDoc.getPage(pageIndex);
-    const { width, height } = page.getSize();
+    if (!pdfDoc || !pdfCanvasRef.current || !file) return;
 
     const canvas = pdfCanvasRef.current;
-    const scale = Math.min(800 / width, 600 / height);
-    
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Initialize or resize Fabric canvas
-    if (!fabricCanvas && canvasRef.current) {
-      const fabric = new FabricCanvas(canvasRef.current, {
-        width: canvas.width,
-        height: canvas.height,
-        backgroundColor: "transparent",
-        selection: activeTool === "select",
-      });
-
-      setFabricCanvas(fabric);
-    } else if (fabricCanvas) {
-      fabricCanvas.setDimensions({ width: canvas.width, height: canvas.height });
-      fabricCanvas.clear();
+    try {
+      // Use PDF.js to render the actual PDF page
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(pageIndex + 1);
       
-      // Restore redactions for this page
-      const redactions = pageRedactions.get(pageIndex) || [];
-      redactions.forEach(box => {
-        const rect = new Rect({
-          left: box.left,
-          top: box.top,
-          width: box.width,
-          height: box.height,
-          fill: "#000000",
-          selectable: activeTool === "select",
-          hasControls: true,
-          hasBorders: true,
+      // Get page dimensions from pdf-lib for consistency
+      const pdfLibPage = pdfDoc.getPage(pageIndex);
+      const { width, height } = pdfLibPage.getSize();
+      const scale = Math.min(800 / width, 600 / height);
+      
+      const viewport = page.getViewport({ scale });
+      
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      // Render PDF page
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport,
+        canvas: canvas,
+      }).promise;
+
+      // Initialize or resize Fabric canvas
+      if (!fabricCanvas && canvasRef.current) {
+        const fabric = new FabricCanvas(canvasRef.current, {
+          width: canvas.width,
+          height: canvas.height,
+          backgroundColor: "transparent",
+          selection: activeTool === "select",
         });
-        fabricCanvas.add(rect);
+
+        setFabricCanvas(fabric);
+      } else if (fabricCanvas) {
+        fabricCanvas.setDimensions({ width: canvas.width, height: canvas.height });
+        fabricCanvas.clear();
+        
+        // Restore redactions for this page
+        const redactions = pageRedactions.get(pageIndex) || [];
+        redactions.forEach(box => {
+          const rect = new Rect({
+            left: box.left,
+            top: box.top,
+            width: box.width,
+            height: box.height,
+            fill: "#000000",
+            selectable: activeTool === "select",
+            hasControls: true,
+            hasBorders: true,
+          });
+          fabricCanvas.add(rect);
+        });
+        
+        setRedactionCount(redactions.length);
+      }
+    } catch (error) {
+      console.error("Error rendering PDF page:", error);
+      toast({
+        title: "Error",
+        description: "Failed to render PDF page",
+        variant: "destructive",
       });
-      
-      setRedactionCount(redactions.length);
     }
   };
 
