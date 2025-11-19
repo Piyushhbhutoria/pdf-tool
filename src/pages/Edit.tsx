@@ -7,6 +7,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { PDFDocument } from "pdf-lib";
 import { useToast } from "@/hooks/use-toast";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
+import { TextFormattingToolbar } from "@/components/editor/TextFormattingToolbar";
 import { Canvas as FabricCanvas, FabricImage, Rect, Circle, Line, IText, PencilBrush } from "fabric";
 import { Card } from "@/components/ui/card";
 import { PdfPageThumbnails } from "@/components/pdf/PdfPageThumbnails";
@@ -26,6 +27,14 @@ const Edit = () => {
   const [canRedo, setCanRedo] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyStep, setHistoryStep] = useState(-1);
+  const [selectedTextObject, setSelectedTextObject] = useState<IText | null>(null);
+  const [textFormatting, setTextFormatting] = useState({
+    fontSize: 20,
+    fontFamily: "Arial",
+    isBold: false,
+    isItalic: false,
+    isUnderline: false,
+  });
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,6 +104,45 @@ const Edit = () => {
       fabric.on("object:added", () => saveToHistory(fabric));
       fabric.on("object:modified", () => saveToHistory(fabric));
       fabric.on("object:removed", () => saveToHistory(fabric));
+
+      // Track text selection for formatting toolbar
+      fabric.on("selection:created", (e) => {
+        const activeObject = e.selected?.[0];
+        if (activeObject && activeObject.type === "i-text") {
+          const textObj = activeObject as IText;
+          setSelectedTextObject(textObj);
+          setTextFormatting({
+            fontSize: textObj.fontSize || 20,
+            fontFamily: textObj.fontFamily || "Arial",
+            isBold: textObj.fontWeight === "bold",
+            isItalic: textObj.fontStyle === "italic",
+            isUnderline: textObj.underline || false,
+          });
+        } else {
+          setSelectedTextObject(null);
+        }
+      });
+
+      fabric.on("selection:updated", (e) => {
+        const activeObject = e.selected?.[0];
+        if (activeObject && activeObject.type === "i-text") {
+          const textObj = activeObject as IText;
+          setSelectedTextObject(textObj);
+          setTextFormatting({
+            fontSize: textObj.fontSize || 20,
+            fontFamily: textObj.fontFamily || "Arial",
+            isBold: textObj.fontWeight === "bold",
+            isItalic: textObj.fontStyle === "italic",
+            isUnderline: textObj.underline || false,
+          });
+        } else {
+          setSelectedTextObject(null);
+        }
+      });
+
+      fabric.on("selection:cleared", () => {
+        setSelectedTextObject(null);
+      });
 
       setFabricCanvas(fabric);
     } else if (fabricCanvas) {
@@ -274,6 +322,44 @@ const Edit = () => {
     }
   };
 
+  const handleFontSizeChange = (size: number) => {
+    if (!selectedTextObject) return;
+    selectedTextObject.set({ fontSize: size });
+    fabricCanvas?.renderAll();
+    setTextFormatting((prev) => ({ ...prev, fontSize: size }));
+  };
+
+  const handleFontFamilyChange = (family: string) => {
+    if (!selectedTextObject) return;
+    selectedTextObject.set({ fontFamily: family });
+    fabricCanvas?.renderAll();
+    setTextFormatting((prev) => ({ ...prev, fontFamily: family }));
+  };
+
+  const handleToggleBold = () => {
+    if (!selectedTextObject) return;
+    const newBold = !textFormatting.isBold;
+    selectedTextObject.set({ fontWeight: newBold ? "bold" : "normal" });
+    fabricCanvas?.renderAll();
+    setTextFormatting((prev) => ({ ...prev, isBold: newBold }));
+  };
+
+  const handleToggleItalic = () => {
+    if (!selectedTextObject) return;
+    const newItalic = !textFormatting.isItalic;
+    selectedTextObject.set({ fontStyle: newItalic ? "italic" : "normal" });
+    fabricCanvas?.renderAll();
+    setTextFormatting((prev) => ({ ...prev, isItalic: newItalic }));
+  };
+
+  const handleToggleUnderline = () => {
+    if (!selectedTextObject) return;
+    const newUnderline = !textFormatting.isUnderline;
+    selectedTextObject.set({ underline: newUnderline });
+    fabricCanvas?.renderAll();
+    setTextFormatting((prev) => ({ ...prev, isUnderline: newUnderline }));
+  };
+
   const handleSave = async () => {
     if (!pdfDoc || !fabricCanvas || !pdfCanvasRef.current) return;
 
@@ -379,6 +465,21 @@ const Edit = () => {
                 canUndo={canUndo}
                 canRedo={canRedo}
               />
+
+              {selectedTextObject && (
+                <TextFormattingToolbar
+                  fontSize={textFormatting.fontSize}
+                  fontFamily={textFormatting.fontFamily}
+                  isBold={textFormatting.isBold}
+                  isItalic={textFormatting.isItalic}
+                  isUnderline={textFormatting.isUnderline}
+                  onFontSizeChange={handleFontSizeChange}
+                  onFontFamilyChange={handleFontFamilyChange}
+                  onToggleBold={handleToggleBold}
+                  onToggleItalic={handleToggleItalic}
+                  onToggleUnderline={handleToggleUnderline}
+                />
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4">
                 {totalPages > 1 && pdfDoc && (
