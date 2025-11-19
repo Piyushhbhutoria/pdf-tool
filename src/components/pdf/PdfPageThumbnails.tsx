@@ -4,6 +4,9 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Maximize2 } from "lucide-react";
+import { PdfPagePreviewModal } from "./PdfPagePreviewModal";
 import * as pdfjsLib from "pdfjs-dist";
 
 // Set worker path
@@ -32,6 +35,8 @@ export const PdfPageThumbnails = ({
 }: PdfPageThumbnailsProps) => {
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPage, setPreviewPage] = useState(1);
 
   useEffect(() => {
     const generateThumbnails = async () => {
@@ -83,6 +88,12 @@ export const PdfPageThumbnails = ({
     }
   };
 
+  const handlePreviewClick = (pageIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPreviewPage(pageIndex + 1);
+    setPreviewOpen(true);
+  };
+
   if (isLoading) {
     return (
       <ScrollArea className={cn("h-full", className)}>
@@ -116,7 +127,7 @@ export const PdfPageThumbnails = ({
               )}
             >
               <div className="p-3 space-y-2">
-                <div className="relative">
+                <div className="relative group">
                   <img
                     src={thumb}
                     alt={`Page ${index + 1}`}
@@ -139,6 +150,16 @@ export const PdfPageThumbnails = ({
                       </div>
                     </div>
                   )}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-7 w-7 shadow-md"
+                      onClick={(e) => handlePreviewClick(index, e)}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-xs text-center text-muted-foreground font-medium">
                   Page {index + 1}
@@ -148,6 +169,15 @@ export const PdfPageThumbnails = ({
           );
         })}
       </div>
+
+      <PdfPagePreviewModal
+        file={file || null}
+        pageNumber={previewPage}
+        totalPages={pdfDoc.getPageCount()}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        onPageChange={setPreviewPage}
+      />
     </ScrollArea>
   );
 };
