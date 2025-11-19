@@ -56,28 +56,26 @@ const SortablePageItem = ({ page }: { page: PageThumbnail }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-shadow ${
-        isDragging ? "opacity-50 z-50" : ""
+      className={`relative group bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all ${
+        isDragging ? "opacity-50 z-50 scale-105" : ""
       }`}
     >
-      <div className="flex items-center gap-4">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-        >
-          <GripVertical className="h-5 w-5" />
-        </div>
-        <div className="flex-shrink-0">
-          <img
-            src={page.dataUrl}
-            alt={`Page ${page.pageNumber}`}
-            className="w-24 h-32 object-contain border border-border rounded"
-          />
-        </div>
-        <div className="flex-1">
-          <p className="font-medium text-foreground">Page {page.pageNumber}</p>
-        </div>
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 right-2 z-10 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-sm rounded p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <GripVertical className="h-4 w-4 text-foreground" />
+      </div>
+      <div className="p-3 space-y-2">
+        <img
+          src={page.dataUrl}
+          alt={`Page ${page.pageNumber}`}
+          className="w-full h-32 object-contain rounded border border-border bg-muted/30"
+        />
+        <p className="text-xs text-center text-muted-foreground font-medium">
+          Page {page.pageNumber}
+        </p>
       </div>
     </div>
   );
@@ -253,9 +251,12 @@ const Rearrange = () => {
 
               <ScrollArea className="h-[600px] rounded-lg border border-border bg-card p-4">
                 {isLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-40 w-full" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="w-full h-32 rounded" />
+                        <Skeleton className="w-full h-4" />
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -268,7 +269,7 @@ const Rearrange = () => {
                       items={pages.map((p) => p.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {pages.map((page) => (
                           <SortablePageItem key={page.id} page={page} />
                         ))}
