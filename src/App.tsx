@@ -9,8 +9,6 @@ import Merge from "./pages/Merge";
 import Split from "./pages/Split";
 import Rearrange from "./pages/Rearrange";
 import Compress from "./pages/Compress";
-import Edit from "./pages/Edit";
-import Redact from "./pages/Redact";
 
 const queryClient = new QueryClient();
 
@@ -26,8 +24,6 @@ const App = () => (
           <Route path="/split" element={<Split />} />
           <Route path="/rearrange" element={<Rearrange />} />
           <Route path="/compress" element={<Compress />} />
-          <Route path="/edit" element={<Edit />} />
-          <Route path="/redact" element={<Redact />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
