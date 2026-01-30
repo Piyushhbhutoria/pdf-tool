@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { ToolCard } from "@/components/ToolCard";
 import { FileText, Merge, Scissors, ArrowUpDown, Minimize2 } from "lucide-react";
 
@@ -35,10 +36,10 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
       <Header />
       
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-12 flex-1">
         {/* Hero Section */}
         <div className="text-center mb-16 space-y-4">
           <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4">
@@ -77,6 +78,8 @@ const Index = () => {
           </div>
         </div>
       </main>
+      
+      <Footer />
     </div>
   );
 };
