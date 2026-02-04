@@ -1,6 +1,6 @@
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, FileDown, Minimize2 } from "lucide-react";
+import { ArrowLeft, Download, FileDown, Minimize2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
@@ -8,14 +8,49 @@ import { PDFDocument } from "pdf-lib";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+// Set worker path for Vite
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 type QualityLevel = "high" | "medium" | "low";
+
+interface QualitySettings {
+  quality: number;
+  scale: number;
+  description: string;
+  expectedReduction: string;
+}
+
+const qualityPresets: Record<QualityLevel, QualitySettings> = {
+  high: {
+    quality: 0.85,
+    scale: 2.0,
+    description: "Best quality, suitable for printing",
+    expectedReduction: "20-40%",
+  },
+  medium: {
+    quality: 0.60,
+    scale: 1.5,
+    description: "Balanced quality and file size",
+    expectedReduction: "40-60%",
+  },
+  low: {
+    quality: 0.35,
+    scale: 1.0,
+    description: "Maximum compression, smaller file",
+    expectedReduction: "60-80%",
+  },
+};
 
 const Compress = () => {
   const [file, setFile] = useState<File | null>(null);
   const [compressedPdf, setCompressedPdf] = useState<Uint8Array | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("");
   const [selectedQuality, setSelectedQuality] = useState<QualityLevel>("medium");
   const [originalSize, setOriginalSize] = useState<number>(0);
   const [compressedSize, setCompressedSize] = useState<number>(0);
@@ -36,6 +71,7 @@ const Compress = () => {
       setCompressedPdf(null);
       setCompressedSize(0);
       setProgress(0);
+      setProgressText("");
     }
   };
 
@@ -43,48 +79,76 @@ const Compress = () => {
     if (!file) return;
 
     setIsCompressing(true);
-    setProgress(10);
+    setProgress(0);
+    setProgressText("Loading PDF...");
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      setProgress(30);
+      const settings = qualityPresets[selectedQuality];
 
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      setProgress(50);
+      // Load PDF with pdfjs-dist for rendering
+      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const totalPages = pdfDoc.numPages;
 
-      // Compression settings based on quality
-      const compressionOptions: Record<QualityLevel, any> = {
-        high: { 
-          objectsPerTick: 50,
-          updateFieldAppearances: true 
-        },
-        medium: { 
-          objectsPerTick: 100,
-          updateFieldAppearances: false 
-        },
-        low: { 
-          objectsPerTick: 200,
-          updateFieldAppearances: false 
-        }
-      };
+      setProgress(10);
+      setProgressText("Creating new PDF...");
 
-      setProgress(70);
+      // Create new PDF document with pdf-lib
+      const newPdfDoc = await PDFDocument.create();
 
-      // Save with compression
-      const pdfBytes = await pdfDoc.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-        objectsPerTick: compressionOptions[selectedQuality].objectsPerTick,
-        updateFieldAppearances: compressionOptions[selectedQuality].updateFieldAppearances,
-      });
+      // Process each page
+      for (let i = 1; i <= totalPages; i++) {
+        setProgressText(`Processing page ${i} of ${totalPages}...`);
+        const pageProgress = 10 + ((i - 1) / totalPages) * 80;
+        setProgress(Math.round(pageProgress));
+
+        // Get the page
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: settings.scale });
+
+        // Create canvas and render page
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Could not get canvas context");
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+          canvas: canvas,
+        }).promise;
+
+        // Convert to JPEG with compression
+        const jpegDataUrl = canvas.toDataURL("image/jpeg", settings.quality);
+        const jpegBase64 = jpegDataUrl.split(",")[1];
+        const jpegBytes = Uint8Array.from(atob(jpegBase64), (c) => c.charCodeAt(0));
+
+        // Embed image in new PDF
+        const image = await newPdfDoc.embedJpg(jpegBytes);
+        const newPage = newPdfDoc.addPage([image.width, image.height]);
+        newPage.drawImage(image, {
+          x: 0,
+          y: 0,
+          width: image.width,
+          height: image.height,
+        });
+      }
 
       setProgress(90);
+      setProgressText("Saving compressed PDF...");
+
+      // Save the new PDF
+      const pdfBytes = await newPdfDoc.save();
+
+      setProgress(100);
+      setProgressText("Complete!");
       setCompressedPdf(pdfBytes);
       setCompressedSize(pdfBytes.length);
-      setProgress(100);
 
       const reductionPercent = Math.round(((originalSize - pdfBytes.length) / originalSize) * 100);
-      
+
       toast({
         title: "PDF Compressed Successfully!",
         description: `File size reduced by ${reductionPercent}% (${formatFileSize(originalSize)} → ${formatFileSize(pdfBytes.length)})`,
@@ -119,20 +183,25 @@ const Compress = () => {
     setFile(null);
     setCompressedPdf(null);
     setProgress(0);
+    setProgressText("");
     setOriginalSize(0);
     setCompressedSize(0);
   };
 
-  const compressionPercent = originalSize > 0 && compressedSize > 0 
-    ? Math.round(((originalSize - compressedSize) / originalSize) * 100)
-    : 0;
+  const compressionPercent =
+    originalSize > 0 && compressedSize > 0
+      ? Math.round(((originalSize - compressedSize) / originalSize) * 100)
+      : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to Tools
         </Link>
@@ -161,7 +230,8 @@ const Compress = () => {
                       </p>
                       {compressedSize > 0 && (
                         <p className="text-sm font-medium text-primary mt-1">
-                          Compressed size: {formatFileSize(compressedSize)} ({compressionPercent}% reduction)
+                          Compressed size: {formatFileSize(compressedSize)} ({compressionPercent}%
+                          reduction)
                         </p>
                       )}
                     </div>
@@ -174,32 +244,47 @@ const Compress = () => {
 
               {/* Quality Selection */}
               {!compressedPdf && (
-                <Card className="p-6">
-                  <h3 className="font-semibold text-foreground mb-4">Select Compression Quality</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {(["high", "medium", "low"] as QualityLevel[]).map((quality) => (
-                      <button
-                        key={quality}
-                        onClick={() => setSelectedQuality(quality)}
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          selectedQuality === quality
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <Minimize2 className="h-6 w-6 text-primary mb-2 mx-auto" />
-                        <div className="text-center">
-                          <h4 className="font-semibold text-foreground capitalize">{quality}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {quality === "high" && "Best quality, moderate compression"}
-                            {quality === "medium" && "Balanced quality and size"}
-                            {quality === "low" && "Maximum compression"}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </Card>
+                <>
+                  <Card className="p-6">
+                    <h3 className="font-semibold text-foreground mb-4">
+                      Select Compression Quality
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {(["high", "medium", "low"] as QualityLevel[]).map((quality) => {
+                        const preset = qualityPresets[quality];
+                        return (
+                          <button
+                            key={quality}
+                            onClick={() => setSelectedQuality(quality)}
+                            className={`p-4 rounded-lg border-2 transition-all text-left ${
+                              selectedQuality === quality
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <Minimize2 className="h-6 w-6 text-primary mb-2" />
+                            <h4 className="font-semibold text-foreground capitalize">{quality}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {preset.description}
+                            </p>
+                            <p className="text-xs font-medium text-primary mt-2">
+                              ~{preset.expectedReduction} reduction
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Card>
+
+                  {/* Warning about text becoming non-selectable */}
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Note:</strong> Compression converts pages to images. Text will no
+                      longer be selectable or searchable in the compressed PDF.
+                    </AlertDescription>
+                  </Alert>
+                </>
               )}
 
               {/* Progress */}
@@ -207,37 +292,24 @@ const Compress = () => {
                 <Card className="p-6">
                   <h3 className="font-semibold text-foreground mb-4">Compressing PDF...</h3>
                   <Progress value={progress} className="h-2" />
-                  <p className="text-sm text-muted-foreground mt-2 text-center">{progress}%</p>
+                  <p className="text-sm text-muted-foreground mt-2 text-center">{progressText}</p>
                 </Card>
               )}
 
               {/* Action Buttons */}
               <div className="flex gap-4">
                 {!compressedPdf ? (
-                  <Button 
-                    onClick={compressPdf} 
-                    disabled={isCompressing}
-                    size="lg"
-                    className="flex-1"
-                  >
+                  <Button onClick={compressPdf} disabled={isCompressing} size="lg" className="flex-1">
                     <Minimize2 className="h-5 w-5" />
                     Compress PDF
                   </Button>
                 ) : (
                   <>
-                    <Button 
-                      onClick={handleDownload}
-                      size="lg"
-                      className="flex-1"
-                    >
+                    <Button onClick={handleDownload} size="lg" className="flex-1">
                       <Download className="h-5 w-5" />
                       Download Compressed PDF
                     </Button>
-                    <Button 
-                      onClick={resetState}
-                      variant="outline"
-                      size="lg"
-                    >
+                    <Button onClick={resetState} variant="outline" size="lg">
                       Compress Another
                     </Button>
                   </>
