@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set Vite base path and public site URL for SEO
+        shell: bash
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          # Must match the GitHub repository name for default Pages URLs.
+          PROJECT_SLUG="pdf-tool"
+          if [[ "$REPO" == *.github.io ]]; then
+            echo "VITE_BASE_URL=/" >> "$GITHUB_ENV"
+            echo "VITE_SITE_URL=https://${OWNER}.github.io/" >> "$GITHUB_ENV"
+          else
+            echo "VITE_BASE_URL=/${PROJECT_SLUG}/" >> "$GITHUB_ENV"
+            echo "VITE_SITE_URL=https://${OWNER}.github.io/${PROJECT_SLUG}/" >> "$GITHUB_ENV"
+          fi
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: SPA fallback (GitHub Pages serves 404.html for unknown paths)
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

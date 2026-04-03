@@ -12,12 +12,15 @@ import Compress from "./pages/Compress";
 
 const queryClient = new QueryClient();
 
+const routerBasename =
+  import.meta.env.BASE_URL.replace(/\/$/, "") || undefined;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/merge" element={<Merge />} />

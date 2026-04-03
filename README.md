@@ -1,73 +1,46 @@
-# Welcome to your Lovable project
+# PDF Tools Suite
 
-## Project info
+Free browser-based PDF utilities: **merge**, **split**, **compress**, and **rearrange** pages. Files are processed locally in your browser.
 
-**URL**: https://lovable.dev/projects/48340074-700c-49fc-9d8f-bec18d1fd618
+## Stack
 
-## How can I edit this code?
+- [Vite](https://vitejs.dev/) + [React](https://react.dev/) + TypeScript
+- [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
+- [pdf-lib](https://pdf-lib.js.org/) & [pdfjs-dist](https://mozilla.github.io/pdf.js/)
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/48340074-700c-49fc-9d8f-bec18d1fd618) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Production build
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build
+npm run preview
+```
 
-**Use GitHub Codespaces**
+For a GitHub **project** site at `https://<you>.github.io/pdf-tool/`, match asset and SEO URLs:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```sh
+VITE_BASE_URL=/pdf-tool/ VITE_SITE_URL=https://yourname.github.io/pdf-tool/ npm run build
+```
 
-## What technologies are used for this project?
+Copy `dist/index.html` to `dist/404.html` if you deploy to GitHub Pages without the included workflow (SPA fallback).
 
-This project is built with:
+## Deploy (GitHub Pages)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The workflow [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml) builds on push to `main` or `master`, sets `VITE_BASE_URL=/pdf-tool/` and `VITE_SITE_URL=https://<owner>.github.io/pdf-tool/` (user/org sites named `*.github.io` still use `/` at the domain root), and publishes with GitHub Actions.
 
-## How can I deploy this project?
+In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
-Simply open [Lovable](https://lovable.dev/projects/48340074-700c-49fc-9d8f-bec18d1fd618) and click on Share -> Publish.
+## SEO configuration
 
-## Can I connect a custom domain to my Lovable project?
+- **`VITE_SITE_URL`** — Set in the deploy workflow (or in your shell when building) for canonical URL, Open Graph, Twitter cards, JSON-LD, and `sitemap.xml`. Local builds default to `http://localhost:8080/` if unset.
+- **Social preview image** — [`public/og-image.png`](public/og-image.png) (about 1200×630). Replace it if you want different branding.
 
-Yes, you can!
+## License
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+See the repository license file if one is present.
