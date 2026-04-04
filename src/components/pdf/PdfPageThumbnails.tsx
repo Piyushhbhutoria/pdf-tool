@@ -7,11 +7,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Maximize2 } from "lucide-react";
 import { PdfPagePreviewModal } from "./PdfPagePreviewModal";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-// Set worker path for Vite
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { pdfjsLib } from "@/lib/pdfjs";
 
 interface PdfPageThumbnailsProps {
   pdfDoc: PDFDocument;
@@ -40,20 +37,30 @@ export const PdfPageThumbnails = ({
   const [previewPage, setPreviewPage] = useState(1);
 
   useEffect(() => {
+    let cancelled = false;
+
+    if (!file) {
+      setThumbnails([]);
+      setIsLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const generateThumbnails = async () => {
-      if (!file) return;
-      
       setIsLoading(true);
+      let pdf: PDFDocumentProxy | null = null;
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const pageCount = pdf.numPages;
         const thumbs: string[] = [];
 
         for (let i = 1; i <= pageCount; i++) {
+          if (cancelled) break;
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 0.3 });
-          
+
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
           if (!context) continue;
@@ -63,23 +70,36 @@ export const PdfPageThumbnails = ({
 
           await page.render({
             canvasContext: context,
-            viewport: viewport,
-            canvas: canvas,
+            viewport,
+            canvas,
           }).promise;
 
           thumbs.push(canvas.toDataURL());
         }
 
-        setThumbnails(thumbs);
-      } catch (error) {
-        console.error("Error generating thumbnails:", error);
+        if (!cancelled) {
+          setThumbnails(thumbs);
+        }
+      } catch {
+        if (!cancelled) {
+          setThumbnails([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (pdf) {
+          await pdf.destroy().catch(() => undefined);
+        }
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    generateThumbnails();
-  }, [pdfDoc, file]);
+    void generateThumbnails();
+    return () => {
+      cancelled = true;
+      setIsLoading(false);
+    };
+  }, [file]);
 
   const handlePageInteraction = (pageIndex: number) => {
     if (multiSelect && onPageSelect) {

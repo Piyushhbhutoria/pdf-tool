@@ -1,13 +1,11 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from "lucide-react";
-import * as pdfjsLib from "pdfjs-dist";
 import { Skeleton } from "@/components/ui/skeleton";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-// Set worker path for Vite
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { pdfjsLib } from "@/lib/pdfjs";
+import { downloadDataUrl } from "@/lib/download";
 
 interface PdfPagePreviewModalProps {
   file: File | null;
@@ -29,21 +27,20 @@ export const PdfPagePreviewModal = ({
   const [previewImage, setPreviewImage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [scale, setScale] = useState(1.5);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     if (pageNumber > 1) {
       const newPage = pageNumber - 1;
       onPageChange?.(newPage);
     }
-  };
+  }, [onPageChange, pageNumber]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (pageNumber < totalPages) {
       const newPage = pageNumber + 1;
       onPageChange?.(newPage);
     }
-  };
+  }, [onPageChange, pageNumber, totalPages]);
 
   const handleZoomIn = () => {
     setScale((prev) => Math.min(prev + 0.5, 3));
@@ -55,21 +52,23 @@ export const PdfPagePreviewModal = ({
 
   const handleDownloadPage = () => {
     if (!previewImage) return;
-    
-    const link = document.createElement("a");
-    link.href = previewImage;
-    link.download = `page-${pageNumber}.png`;
-    link.click();
+
+    downloadDataUrl(previewImage, `page-${pageNumber}.png`);
   };
 
   useEffect(() => {
-    const renderPage = async () => {
-      if (!file || !open) return;
+    if (!file || !open) return;
 
+    let cancelled = false;
+
+    const renderPage = async () => {
       setIsLoading(true);
+      let pdf: PDFDocumentProxy | null = null;
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        if (cancelled) return;
+
         const page = await pdf.getPage(pageNumber);
         const viewport = page.getViewport({ scale });
 
@@ -82,19 +81,32 @@ export const PdfPagePreviewModal = ({
 
         await page.render({
           canvasContext: context,
-          viewport: viewport,
-          canvas: canvas,
+          viewport,
+          canvas,
         }).promise;
 
-        setPreviewImage(canvas.toDataURL());
-      } catch (error) {
-        console.error("Error rendering page:", error);
+        if (!cancelled) {
+          setPreviewImage(canvas.toDataURL());
+        }
+      } catch {
+        if (!cancelled) {
+          setPreviewImage("");
+        }
       } finally {
-        setIsLoading(false);
+        if (pdf) {
+          await pdf.destroy().catch(() => undefined);
+        }
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    renderPage();
+    void renderPage();
+    return () => {
+      cancelled = true;
+      setIsLoading(false);
+    };
   }, [file, pageNumber, scale, open]);
 
   useEffect(() => {
@@ -114,7 +126,7 @@ export const PdfPagePreviewModal = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, pageNumber, totalPages, handlePrevious, handleNext, onOpenChange]);
+  }, [handleNext, handlePrevious, onOpenChange, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -6,19 +6,16 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
 import { Skeleton } from "@/components/ui/skeleton";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-// Set worker path for Vite
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { pdfjsLib } from "@/lib/pdfjs";
 
 interface MergeFileItemProps {
   file: File;
-  index: number;
+  sortableId: string;
   onRemove: () => void;
 }
 
-export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => {
+export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +28,7 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: `file-${index}` });
+  } = useSortable({ id: sortableId });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -45,8 +42,8 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
         const arrayBuffer = await file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer);
         setPageCount(pdfDoc.getPageCount());
-      } catch (error) {
-        console.error("Error loading PDF:", error);
+      } catch {
+        setPageCount(0);
       }
     };
 
@@ -58,17 +55,16 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
       if (!isExpanded || thumbnails.length > 0) return;
 
       setIsLoading(true);
+      let pdf: PDFDocumentProxy | null = null;
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const maxPages = Math.min(pdf.numPages, 10); // Limit to first 10 pages
-        
+        pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const thumbs: string[] = [];
-        
-        for (let i = 1; i <= maxPages; i++) {
+
+        for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 0.5 });
-          
+
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
           if (!context) continue;
@@ -78,17 +74,20 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
 
           await page.render({
             canvasContext: context,
-            viewport: viewport,
-            canvas: canvas,
+            viewport,
+            canvas,
           }).promise;
 
           thumbs.push(canvas.toDataURL());
         }
 
         setThumbnails(thumbs);
-      } catch (error) {
-        console.error("Error generating thumbnails:", error);
+      } catch {
+        setThumbnails([]);
       } finally {
+        if (pdf) {
+          await pdf.destroy().catch(() => undefined);
+        }
         setIsLoading(false);
       }
     };
@@ -108,7 +107,7 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{file.name}</p>
             <p className="text-sm text-muted-foreground">
-              {(file.size / 1024 / 1024).toFixed(2)} MB • {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+              {(file.size / 1024 / 1024).toFixed(2)} MB • {pageCount} {pageCount === 1 ? "page" : "pages"}
             </p>
           </div>
           <Button
@@ -154,11 +153,6 @@ export const MergeFileItem = ({ file, index, onRemove }: MergeFileItemProps) => 
                   </div>
                 </div>
               ))}
-              {pageCount > 10 && (
-                <div className="flex items-center justify-center aspect-[3/4] rounded border border-dashed bg-muted/50 text-xs text-muted-foreground">
-                  +{pageCount - 10} more
-                </div>
-              )}
             </div>
           )}
         </div>
