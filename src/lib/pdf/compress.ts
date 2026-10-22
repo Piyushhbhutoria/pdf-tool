@@ -55,16 +55,11 @@ const renderCompressedBytes = async (
     const viewport = page.getViewport({ scale: settings.scale });
 
     const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Could not get canvas context");
-    }
 
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
     await page.render({
-      canvasContext: context,
       viewport,
       canvas,
     }).promise;
@@ -145,6 +140,6 @@ export const compressPdfFile = async (
       isReduced: true,
     };
   } finally {
-    await pdfDoc?.destroy().catch(() => undefined);
+    await pdfDoc?.loadingTask.destroy().catch(() => undefined);
   }
 };

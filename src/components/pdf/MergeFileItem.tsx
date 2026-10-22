@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
@@ -66,14 +66,11 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
           const viewport = page.getViewport({ scale: 0.5 });
 
           const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          if (!context) continue;
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
 
           await page.render({
-            canvasContext: context,
             viewport,
             canvas,
           }).promise;
@@ -86,7 +83,7 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
         setThumbnails([]);
       } finally {
         if (pdf) {
-          await pdf.destroy().catch(() => undefined);
+          await pdf.loadingTask.destroy().catch(() => undefined);
         }
         setIsLoading(false);
       }
@@ -126,7 +123,7 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
             variant="ghost"
             size="sm"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
           </Button>
         </div>
       </div>

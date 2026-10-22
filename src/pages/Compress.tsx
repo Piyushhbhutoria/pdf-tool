@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Download, FileDown, Minimize2, AlertTriangle } from "lucide-react";
+import { Download, FileDown, Minimize2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { Progress } from "@/components/ui/progress";
@@ -204,7 +204,7 @@ const Compress = () => {
               </Card>
 
               <Alert>
-                <AlertTriangle className="h-4 w-4" />
+                <TriangleAlert className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Note:</strong> Compression converts pages to images. Text will no longer
                   be selectable or searchable in the compressed PDF.

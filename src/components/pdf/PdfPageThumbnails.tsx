@@ -62,14 +62,11 @@ export const PdfPageThumbnails = ({
           const viewport = page.getViewport({ scale: 0.3 });
 
           const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          if (!context) continue;
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
 
           await page.render({
-            canvasContext: context,
             viewport,
             canvas,
           }).promise;
@@ -86,7 +83,7 @@ export const PdfPageThumbnails = ({
         }
       } finally {
         if (pdf) {
-          await pdf.destroy().catch(() => undefined);
+          await pdf.loadingTask.destroy().catch(() => undefined);
         }
         if (!cancelled) {
           setIsLoading(false);
