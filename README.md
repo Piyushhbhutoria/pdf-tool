@@ -10,6 +10,8 @@ Free browser-based PDF utilities: **merge**, **split**, **compress**, and **rear
 
 ## Development
 
+Requires Node 24 (see `.nvmrc`).
+
 ```sh
 npm install
 npm run dev
