@@ -37,15 +37,9 @@ export const PdfPageThumbnails = ({
   const [previewPage, setPreviewPage] = useState(1);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!file) return;
 
-    if (!file) {
-      setThumbnails([]);
-      setIsLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
+    let cancelled = false;
 
     const generateThumbnails = async () => {
       setIsLoading(true);
@@ -112,7 +106,9 @@ export const PdfPageThumbnails = ({
     setPreviewOpen(true);
   };
 
-  if (isLoading) {
+  const visibleThumbnails = file ? thumbnails : [];
+
+  if (file && isLoading) {
     return (
       <ScrollArea className={cn("h-full", className)}>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
@@ -130,7 +126,7 @@ export const PdfPageThumbnails = ({
   return (
     <ScrollArea className={cn("h-full", className)}>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
-        {thumbnails.map((thumb, index) => {
+        {visibleThumbnails.map((thumb, index) => {
           const isSelected = selectedPages.includes(index);
           const isCurrent = currentPage === index;
 
