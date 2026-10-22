@@ -41,7 +41,8 @@ TypeScript is held at 6.x on purpose: `typescript-eslint` only supports `typescr
 `vite.config.ts` includes an inline `seo` plugin that:
 - replaces every `__SITE_URL__` placeholder in `index.html` (canonical, Open Graph, Twitter, JSON-LD) with `VITE_SITE_URL`,
 - emits `sitemap.xml` from a hard-coded `routes` array,
-- appends a `Sitemap:` line to `dist/robots.txt`.
+- appends a `Sitemap:` line to `dist/robots.txt`,
+- copies `dist/index.html` to `dist/404.html` for GitHub Pages SPA fallback.
 
 **When adding a new tool route, update both `src/App.tsx` and the `routes` array in `vite.config.ts`**, and add a card to the `tools` list in `src/pages/Index.tsx`.
 
@@ -49,7 +50,7 @@ Env vars (read at build time):
 - `VITE_BASE_URL`: Vite `base` / router basename (default `/`).
 - `VITE_SITE_URL`: absolute public URL for SEO tags and sitemap (default `http://localhost:8080/`).
 
-Deployment is via `.github/workflows/deploy-github-pages.yml` on push to `main`/`master`. It sets both env vars (`/pdf-tool/` for a project site, `/` for a `*.github.io` repo), builds, and copies `dist/index.html` to `dist/404.html` for SPA fallback. To reproduce a project-site build locally:
+Deployment is a single job in `.github/workflows/deploy-github-pages.yml` (push to `main` or manual dispatch). `actions/configure-pages` supplies both env vars from the repo's Pages settings, so they may arrive without a trailing slash (`/pdf-tool`, or `""` at the domain root); `vite.config.ts` normalizes them. The `seo` plugin also writes `dist/404.html` (copy of `index.html`) as the SPA fallback. To reproduce a project-site build locally:
 
 ```sh
 VITE_BASE_URL=/pdf-tool/ VITE_SITE_URL=https://<owner>.github.io/pdf-tool/ npm run build

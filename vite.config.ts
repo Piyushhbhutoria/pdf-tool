@@ -47,10 +47,13 @@ ${body}
           });
         },
         writeBundle(options) {
-          const robots = path.join(options.dir ?? "dist", "robots.txt");
+          const outDir = options.dir ?? "dist";
+          const robots = path.join(outDir, "robots.txt");
           if (fs.existsSync(robots)) {
             fs.appendFileSync(robots, `\nSitemap: ${siteUrl}sitemap.xml\n`);
           }
+          // GitHub Pages serves 404.html for unknown paths; reuse the SPA shell.
+          fs.copyFileSync(path.join(outDir, "index.html"), path.join(outDir, "404.html"));
         },
       },
     ],

@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,8 +15,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -24,37 +28,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Set Vite base path and public site URL for SEO
-        shell: bash
-        run: |
-          OWNER="${{ github.repository_owner }}"
-          REPO="${{ github.event.repository.name }}"
-          # Must match the GitHub repository name for default Pages URLs.
-          PROJECT_SLUG="pdf-tool"
-          if [[ "$REPO" == *.github.io ]]; then
-            echo "VITE_BASE_URL=/" >> "$GITHUB_ENV"
-            echo "VITE_SITE_URL=https://${OWNER}.github.io/" >> "$GITHUB_ENV"
-          else
-            echo "VITE_BASE_URL=/${PROJECT_SLUG}/" >> "$GITHUB_ENV"
-            echo "VITE_SITE_URL=https://${OWNER}.github.io/${PROJECT_SLUG}/" >> "$GITHUB_ENV"
-          fi
+      - id: pages
+        uses: actions/configure-pages@v6
 
       - run: npm ci
-      - run: npm run build
 
-      - name: SPA fallback (GitHub Pages serves 404.html for unknown paths)
-        run: cp dist/index.html dist/404.html
+      - run: npm run build
+        env:
+          VITE_BASE_URL: ${{ steps.pages.outputs.base_path }}
+          VITE_SITE_URL: ${{ steps.pages.outputs.base_url }}
 
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
