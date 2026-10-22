@@ -17,11 +17,11 @@ npm run lint         # eslint over the repo
 npm run preview      # serve dist/
 ```
 
-There is no test runner configured. TypeScript is non-strict (`strict: false`, `noImplicitAny: false` in `tsconfig.app.json`), and `vite build` does not type-check; run `npx tsc -p tsconfig.app.json --noEmit` to check types.
+There is no test runner configured. TypeScript is non-strict (`strict: false`, `noImplicitAny: false` in `tsconfig.app.json`), and `vite build` does not type-check; run `npx tsc -p tsconfig.app.json --noEmit` (TS 7) to check types.
 
 Use Node 24 (`.nvmrc`; CI reads it) and npm (`package-lock.json`, `npm ci` in CI).
 
-TypeScript is held at 6.x on purpose: `typescript-eslint` only supports `typescript <6.1`, so don't bump to 7 until it does. ESLint uses the flat config in `eslint.config.js`, which includes the React Compiler rules from `eslint-plugin-react-hooks` 7 (e.g. `set-state-in-effect`).
+TypeScript 7 runs side by side with TypeScript 6, following Microsoft's recommended setup. `@typescript/native` is an alias for `typescript@7` and provides the `tsc` binary, so `npx tsc` is TS 7. The `typescript` package name points at `@typescript/typescript6`, which provides the TS 6 compiler API (binary `tsc6`). That API exists only for `typescript-eslint`: TS 7.0 ships no JS API, and typescript-eslint (peer `<6.1`) imports `typescript` directly. Don't "fix" the `typescript` alias. Once typescript-eslint supports TS 7.1+ (typescript-eslint/typescript-eslint#10940), collapse back to a single `typescript` dependency. ESLint uses the flat config in `eslint.config.js`, which includes the React Compiler rules from `eslint-plugin-react-hooks` 7 (e.g. `set-state-in-effect`).
 
 ## Architecture
 
