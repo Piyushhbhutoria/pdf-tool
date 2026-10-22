@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const base = process.env.VITE_BASE_URL?.replace(/\/?$/, "/") ?? "/";
@@ -55,7 +55,7 @@ ${body}
       },
     ],
     resolve: {
-      alias: { "@": path.resolve(__dirname, "./src") },
+      alias: { "@": path.resolve(import.meta.dirname, "./src") },
     },
   };
 });
