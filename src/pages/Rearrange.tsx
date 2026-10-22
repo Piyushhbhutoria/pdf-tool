@@ -82,7 +82,7 @@ const SortablePageItem = ({ page }: { page: PageThumbnail }) => {
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 right-2 z-10 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-sm rounded p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-2 right-2 z-10 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-xs rounded p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
       >
         <GripVertical className="h-4 w-4 text-foreground" />
       </div>

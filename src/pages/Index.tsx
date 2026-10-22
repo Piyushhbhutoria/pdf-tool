@@ -36,16 +36,16 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/20 flex flex-col">
       <Header />
       
       <main className="container mx-auto px-4 py-12 flex-1">
         {/* Hero Section */}
         <div className="text-center mb-16 space-y-4">
-          <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4">
+          <div className="inline-flex p-4 rounded-2xl bg-linear-to-br from-primary to-accent mb-8">
             <FileText className="h-16 w-16 text-primary-foreground" />
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl font-bold bg-linear-to-r from-primary to-accent bg-clip-text text-transparent">
             PDF Tools Suite
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">

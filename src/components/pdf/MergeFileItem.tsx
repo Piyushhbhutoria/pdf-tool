@@ -133,7 +133,7 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
           {isLoading ? (
             <div className="grid grid-cols-4 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[3/4] w-full rounded" />
+                <Skeleton key={i} className="aspect-3/4 w-full rounded" />
               ))}
             </div>
           ) : (
@@ -143,9 +143,9 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
                   <img
                     src={thumb}
                     alt={`Page ${i + 1}`}
-                    className="w-full rounded border bg-background shadow-sm"
+                    className="w-full rounded border bg-background shadow-xs"
                   />
-                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-background/90 px-2 py-0.5 text-xs font-medium shadow">
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-background/90 px-2 py-0.5 text-xs font-medium shadow-sm">
                     {i + 1}
                   </div>
                 </div>
