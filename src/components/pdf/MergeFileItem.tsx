@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
@@ -66,14 +66,11 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
           const viewport = page.getViewport({ scale: 0.5 });
 
           const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          if (!context) continue;
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
 
           await page.render({
-            canvasContext: context,
             viewport,
             canvas,
           }).promise;
@@ -86,7 +83,7 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
         setThumbnails([]);
       } finally {
         if (pdf) {
-          await pdf.destroy().catch(() => undefined);
+          await pdf.loadingTask.destroy().catch(() => undefined);
         }
         setIsLoading(false);
       }
@@ -126,7 +123,7 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
             variant="ghost"
             size="sm"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -136,7 +133,7 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
           {isLoading ? (
             <div className="grid grid-cols-4 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[3/4] w-full rounded" />
+                <Skeleton key={i} className="aspect-3/4 w-full rounded" />
               ))}
             </div>
           ) : (
@@ -146,9 +143,9 @@ export const MergeFileItem = ({ file, sortableId, onRemove }: MergeFileItemProps
                   <img
                     src={thumb}
                     alt={`Page ${i + 1}`}
-                    className="w-full rounded border bg-background shadow-sm"
+                    className="w-full rounded border bg-background shadow-xs"
                   />
-                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-background/90 px-2 py-0.5 text-xs font-medium shadow">
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-background/90 px-2 py-0.5 text-xs font-medium shadow-sm">
                     {i + 1}
                   </div>
                 </div>

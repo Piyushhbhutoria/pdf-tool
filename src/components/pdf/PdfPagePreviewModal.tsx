@@ -73,14 +73,11 @@ export const PdfPagePreviewModal = ({
         const viewport = page.getViewport({ scale });
 
         const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        if (!context) return;
 
         canvas.width = viewport.width;
         canvas.height = viewport.height;
 
         await page.render({
-          canvasContext: context,
           viewport,
           canvas,
         }).promise;
@@ -94,7 +91,7 @@ export const PdfPagePreviewModal = ({
         }
       } finally {
         if (pdf) {
-          await pdf.destroy().catch(() => undefined);
+          await pdf.loadingTask.destroy().catch(() => undefined);
         }
         if (!cancelled) {
           setIsLoading(false);

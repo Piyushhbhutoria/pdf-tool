@@ -10,6 +10,8 @@ Free browser-based PDF utilities: **merge**, **split**, **compress**, and **rear
 
 ## Development
 
+Requires Node 24 (see `.nvmrc`).
+
 ```sh
 npm install
 npm run dev
@@ -28,11 +30,11 @@ For a GitHub **project** site at `https://<you>.github.io/pdf-tool/`, match asse
 VITE_BASE_URL=/pdf-tool/ VITE_SITE_URL=https://yourname.github.io/pdf-tool/ npm run build
 ```
 
-Copy `dist/index.html` to `dist/404.html` if you deploy to GitHub Pages without the included workflow (SPA fallback).
+The build also writes `dist/404.html` (a copy of `index.html`) so GitHub Pages serves the SPA for deep links.
 
 ## Deploy (GitHub Pages)
 
-The workflow [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml) builds on push to `main` or `master`, sets `VITE_BASE_URL=/pdf-tool/` and `VITE_SITE_URL=https://<owner>.github.io/pdf-tool/` (user/org sites named `*.github.io` still use `/` at the domain root), and publishes with GitHub Actions.
+The workflow [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml) runs on push to `main` (or manually via *Run workflow*). It reads the site's base path and URL from [`actions/configure-pages`](https://github.com/actions/configure-pages), passes them to the build as `VITE_BASE_URL` / `VITE_SITE_URL`, and deploys with GitHub Actions. This works for project sites, `*.github.io` user sites and custom domains without editing the workflow.
 
 In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 

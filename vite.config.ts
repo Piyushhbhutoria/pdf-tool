@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 const base = process.env.VITE_BASE_URL?.replace(/\/?$/, "/") ?? "/";
 
@@ -19,6 +20,7 @@ export default defineConfig(() => {
     server: { host: "::", port: 8080 },
     plugins: [
       react(),
+      tailwindcss(),
       {
         name: "seo",
         transformIndexHtml(html) {
@@ -45,15 +47,18 @@ ${body}
           });
         },
         writeBundle(options) {
-          const robots = path.join(options.dir ?? "dist", "robots.txt");
+          const outDir = options.dir ?? "dist";
+          const robots = path.join(outDir, "robots.txt");
           if (fs.existsSync(robots)) {
             fs.appendFileSync(robots, `\nSitemap: ${siteUrl}sitemap.xml\n`);
           }
+          // GitHub Pages serves 404.html for unknown paths; reuse the SPA shell.
+          fs.copyFileSync(path.join(outDir, "index.html"), path.join(outDir, "404.html"));
         },
       },
     ],
     resolve: {
-      alias: { "@": path.resolve(__dirname, "./src") },
+      alias: { "@": path.resolve(import.meta.dirname, "./src") },
     },
   };
 });

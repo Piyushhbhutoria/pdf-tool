@@ -199,7 +199,7 @@ const Split = () => {
           </Card>
 
           <div className="space-y-2">
-            <Label htmlFor="ranges">Page Ranges</Label>
+            <Label htmlFor="ranges" className="block leading-6">Page Ranges</Label>
             <Input
               id="ranges"
               placeholder="e.g., 1-3, 5-7, 9"
